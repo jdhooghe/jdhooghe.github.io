@@ -26,7 +26,7 @@ SITE_URL = "https://jdhooghe.github.io/"
 # If not set, defaults to SITE_URL
 # BASE_URL = "https://jdhooghe.github.io/"
 BLOG_EMAIL = "jdhooghe@gmail.com"
-BLOG_DESCRIPTION = "This blog shows some of my current Data Science endeavors."  # (translatable)
+BLOG_DESCRIPTION = "This blog shows some of my current data science endeavors."  # (translatable)
 
 # Nikola is multilingual!
 #
@@ -840,7 +840,7 @@ IMAGE_FOLDERS = {'images': 'images'}
 #
 # If the following is True, INDEXES_PAGES is also displayed on the main (the
 # newest) index page (index.html):
-# INDEXES_PAGES_MAIN = False
+INDEXES_PAGES_MAIN = True
 #
 # If the following is True, index-1.html has the oldest posts, index-2.html the
 # second-oldest posts, etc., and index.html has the newest posts. This ensures
@@ -900,7 +900,7 @@ IMAGE_FOLDERS = {'images': 'images'}
 # )
 
 # Show teasers (instead of full posts) in indexes? Defaults to False.
-# INDEX_TEASERS = False
+INDEX_TEASERS = True
 
 # HTML fragments with the Read more... links.
 # The following tags exist and are replaced for you:
@@ -985,7 +985,7 @@ COMMENT_SYSTEM = "disqus"
 # depends on what comment system you use. The default is
 # "nikolademo" which is a test account for Disqus. More information
 # is in the manual.
-COMMENT_SYSTEM_ID = ""
+COMMENT_SYSTEM_ID = "jdhooghe-github-io"
 
 # Enable annotations using annotateit.org?
 # If set to False, you can still enable them for individual posts and pages
