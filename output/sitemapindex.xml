@@ -6,15 +6,23 @@
     xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
                         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
  <sitemap>
+  <loc>https://jdhooghe.github.io/categories/cat_regression.xml</loc>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
+ </sitemap>
+ <sitemap>
+  <loc>https://jdhooghe.github.io/categories/regression.xml</loc>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
+ </sitemap>
+ <sitemap>
   <loc>https://jdhooghe.github.io/galleries/rss.xml</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </sitemap>
  <sitemap>
   <loc>https://jdhooghe.github.io/rss.xml</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </sitemap>
  <sitemap>
   <loc>https://jdhooghe.github.io/sitemap.xml</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </sitemap>
 </sitemapindex>

@@ -7,30 +7,38 @@
                         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
  <url>
   <loc>https://jdhooghe.github.io/2018/index.html</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/archive.html</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/blog/simple-linear-regression-using-tensorflow.html</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
+ </url>
+ <url>
+  <loc>https://jdhooghe.github.io/categories/cat_regression.html</loc>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/categories/index.html</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
+ </url>
+ <url>
+  <loc>https://jdhooghe.github.io/categories/regression.html</loc>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/galleries/index.html</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/index.html</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/listings/index.html</loc>
-  <lastmod>2018-02-23T00:53:00Z</lastmod>
+  <lastmod>2018-02-23T00:56:00Z</lastmod>
  </url>
 </urlset>
