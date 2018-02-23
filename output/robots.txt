@@ -1,0 +1,4 @@
+Sitemap: https://jdhooghe.github.io/sitemapindex.xml
+
+User-Agent: *
+Host: jdhooghe.github.io
