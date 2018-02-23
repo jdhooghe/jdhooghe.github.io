@@ -26,7 +26,7 @@ SITE_URL = "https://jdhooghe.github.io/"
 # If not set, defaults to SITE_URL
 # BASE_URL = "https://jdhooghe.github.io/"
 BLOG_EMAIL = "jdhooghe@gmail.com"
-BLOG_DESCRIPTION = "This blog shows some of my current data science endeavors."  # (translatable)
+BLOG_DESCRIPTION = "This blog shows some of Justin Dhooghe's current data science endeavors."  # (translatable)
 
 # Nikola is multilingual!
 #
@@ -412,7 +412,7 @@ POSTS_SECTIONS = True
 
 # If TAG_PAGES_ARE_INDEXES is set to True, each tag's page will contain
 # the posts themselves. If set to False, it will be just a list of links.
-# TAG_PAGES_ARE_INDEXES = False
+TAG_PAGES_ARE_INDEXES = False
 
 # Set descriptions for tag pages to make them more interesting. The
 # default is no description. The value is used in the meta description
