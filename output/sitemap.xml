@@ -7,11 +7,15 @@
                         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
  <url>
   <loc>https://jdhooghe.github.io/2018/index.html</loc>
-  <lastmod>2018-02-24T00:19:00Z</lastmod>
+  <lastmod>2018-03-01T02:39:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/archive.html</loc>
-  <lastmod>2018-02-23T23:44:00Z</lastmod>
+  <lastmod>2018-03-01T02:39:00Z</lastmod>
+ </url>
+ <url>
+  <loc>https://jdhooghe.github.io/blog/diabetes-in-the-pima-indian-population-with-logistic-regression-and-hypothesis-testing.html</loc>
+  <lastmod>2018-03-01T02:39:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/blog/predicting-google-stock-price-using-a-rnn-in-keras.html</loc>
@@ -19,7 +23,7 @@
  </url>
  <url>
   <loc>https://jdhooghe.github.io/blog/simple-bayesian-regression.html</loc>
-  <lastmod>2018-02-24T00:19:00Z</lastmod>
+  <lastmod>2018-03-01T02:39:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/blog/simple-linear-regression-using-tensorflow.html</loc>
@@ -59,7 +63,7 @@
  </url>
  <url>
   <loc>https://jdhooghe.github.io/index.html</loc>
-  <lastmod>2018-02-24T00:19:00Z</lastmod>
+  <lastmod>2018-03-01T02:39:00Z</lastmod>
  </url>
  <url>
   <loc>https://jdhooghe.github.io/listings/index.html</loc>
