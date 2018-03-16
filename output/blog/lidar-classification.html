@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article# " lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lidar Classification | Excursion in Data Science</title>
+<link href="../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<link href="../assets/css/ipython.min.css" rel="stylesheet" type="text/css">
+<link href="../assets/css/nikola_ipython.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" href="../rss.xml">
+<link rel="canonical" href="https://jdhooghe.github.io/blog/lidar-classification.html">
+<!--[if lt IE 9]><script src="../assets/js/html5.js"></script><![endif]--><meta name="author" content="Justin Dhooghe">
+<link rel="prev" href="diabetes-in-the-pima-indian-population-with-logistic-regression-and-hypothesis-testing.html" title="Predicting diabetes in the Pima Indian Population with Logistic Regression and Hypothesis Testing" type="text/html">
+<meta property="og:site_name" content="Excursion in Data Science">
+<meta property="og:title" content="Lidar Classification">
+<meta property="og:url" content="https://jdhooghe.github.io/blog/lidar-classification.html">
+<meta property="og:description" content="In [20]:
+
+    
+import pymc3 as pm
+import numpy as np
+import pandas as pd
+from bokeh.plotting import figure, show
+from bokeh.io import output_notebook
+from bokeh.layouts import row
+from sklearn.model_s">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2018-03-16T11:02:34-07:00">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-inverse navbar-static-top"><div class="container">
+<!-- This keeps the margins nice -->
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="https://jdhooghe.github.io/">
+
+                <span id="blog-title">Excursion in Data Science</span>
+            </a>
+        </div>
+<!-- /.navbar-header -->
+        <div class="collapse navbar-collapse" id="bs-navbar" aria-expanded="false">
+            <ul class="nav navbar-nav">
+<li>
+<a href="../archive.html">Archive</a>
+                </li>
+<li>
+<a href="../categories/index.html">Categories</a>
+
+                
+            </li>
+</ul>
+<ul class="nav navbar-nav navbar-right">
+<li>
+    <a href="lidar-classification.ipynb" id="sourcelink">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        <div class="row">
+            
+            
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="#" class="u-url">Lidar Classification</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard"><span class="byline-name fn" itemprop="author">
+                    Justin Dhooghe
+            </span></p>
+            <p class="dateline"><a href="#" rel="bookmark"><time class="published dt-published" datetime="2018-03-16T11:02:34-07:00" itemprop="datePublished" title="2018-03-16 11:02">2018-03-16 11:02</time></a></p>
+                <p class="commentline">
+        
+    <a href="lidar-classification.html#disqus_thread" data-disqus-identifier="cache/posts/lidar-classification.html">Comments</a>
+
+
+            
+        </p>
+<p class="sourceline"><a href="lidar-classification.ipynb" class="sourcelink">Source</a></p>
+
+        </div>
+        
+
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <div tabindex="-1" id="notebook" class="border-box-sizing">
+    <div class="container" id="notebook-container">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [20]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="k">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">bokeh.plotting</span> <span class="k">import</span> <span class="n">figure</span><span class="p">,</span> <span class="n">show</span>
+<span class="kn">from</span> <span class="nn">bokeh.io</span> <span class="k">import</span> <span class="n">output_notebook</span>
+<span class="kn">from</span> <span class="nn">bokeh.layouts</span> <span class="k">import</span> <span class="n">row</span>
+<span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="k">import</span> <span class="n">train_test_split</span>
+<span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="k">import</span> <span class="n">MinMaxScaler</span>
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="n">output_notebook</span><span class="p">()</span>
+<span class="kn">from</span> <span class="nn">random</span> <span class="k">import</span> <span class="n">sample</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="k">import</span> <span class="n">classification_report</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+
+<div class="output_html rendered_html output_subarea ">
+
+    <div class="bk-root">
+        <a href="https://bokeh.pydata.org" target="_blank" class="bk-logo bk-logo-small bk-logo-notebook"></a>
+        <span id="b824ec48-ddec-46db-b7c0-d386cc012b09">Loading BokehJS ...</span>
+    </div>
+</div>
+
+</div>
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+
+
+
+<div id="02706705-4afe-49cb-a720-eb4ea6bee3c1"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#02706705-4afe-49cb-a720-eb4ea6bee3c1');
+
+(function(root) {
+  function now() {
+    return new Date();
+  }
+
+  var force = true;
+
+  if (typeof (root._bokeh_onload_callbacks) === "undefined" || force === true) {
+    root._bokeh_onload_callbacks = [];
+    root._bokeh_is_loading = undefined;
+  }
+
+  var JS_MIME_TYPE = 'application/javascript';
+  var HTML_MIME_TYPE = 'text/html';
+  var EXEC_MIME_TYPE = 'application/vnd.bokehjs_exec.v0+json';
+  var CLASS_NAME = 'output_bokeh rendered_html';
+
+  /**
+   * Render data to the DOM node
+   */
+  function render(props, node) {
+    var script = document.createElement("script");
+    node.appendChild(script);
+  }
+
+  /**
+   * Handle when an output is cleared or removed
+   */
+  function handleClearOutput(event, handle) {
+    var cell = handle.cell;
+
+    var id = cell.output_area._bokeh_element_id;
+    var server_id = cell.output_area._bokeh_server_id;
+    // Clean up Bokeh references
+    if (id !== undefined) {
+      Bokeh.index[id].model.document.clear();
+      delete Bokeh.index[id];
+    }
+
+    if (server_id !== undefined) {
+      // Clean up Bokeh references
+      var cmd = "from bokeh.io.state import curstate; print(curstate().uuid_to_server['" + server_id + "'].get_sessions()[0].document.roots[0]._id)";
+      cell.notebook.kernel.execute(cmd, {
+        iopub: {
+          output: function(msg) {
+            var element_id = msg.content.text.trim();
+            Bokeh.index[element_id].model.document.clear();
+            delete Bokeh.index[element_id];
+          }
+        }
+      });
+      // Destroy server and session
+      var cmd = "import bokeh.io.notebook as ion; ion.destroy_server('" + server_id + "')";
+      cell.notebook.kernel.execute(cmd);
+    }
+  }
+
+  /**
+   * Handle when a new output is added
+   */
+  function handleAddOutput(event, handle) {
+    var output_area = handle.output_area;
+    var output = handle.output;
+
+    // limit handleAddOutput to display_data with EXEC_MIME_TYPE content only
+    if ((output.output_type != "display_data") || (!output.data.hasOwnProperty(EXEC_MIME_TYPE))) {
+      return
+    }
+
+    var toinsert = output_area.element.find("." + CLASS_NAME.split(' ')[0]);
+
+    if (output.metadata[EXEC_MIME_TYPE]["id"] !== undefined) {
+      toinsert[0].firstChild.textContent = output.data[JS_MIME_TYPE];
+      // store reference to embed id on output_area
+      output_area._bokeh_element_id = output.metadata[EXEC_MIME_TYPE]["id"];
+    }
+    if (output.metadata[EXEC_MIME_TYPE]["server_id"] !== undefined) {
+      var bk_div = document.createElement("div");
+      bk_div.innerHTML = output.data[HTML_MIME_TYPE];
+      var script_attrs = bk_div.children[0].attributes;
+      for (var i = 0; i < script_attrs.length; i++) {
+        toinsert[0].firstChild.setAttribute(script_attrs[i].name, script_attrs[i].value);
+      }
+      // store reference to server id on output_area
+      output_area._bokeh_server_id = output.metadata[EXEC_MIME_TYPE]["server_id"];
+    }
+  }
+
+  function register_renderer(events, OutputArea) {
+
+    function append_mime(data, metadata, element) {
+      // create a DOM node to render to
+      var toinsert = this.create_output_subarea(
+        metadata,
+        CLASS_NAME,
+        EXEC_MIME_TYPE
+      );
+      this.keyboard_manager.register_events(toinsert);
+      // Render to node
+      var props = {data: data, metadata: metadata[EXEC_MIME_TYPE]};
+      render(props, toinsert[0]);
+      element.append(toinsert);
+      return toinsert
+    }
+
+    /* Handle when an output is cleared or removed */
+    events.on('clear_output.CodeCell', handleClearOutput);
+    events.on('delete.Cell', handleClearOutput);
+
+    /* Handle when a new output is added */
+    events.on('output_added.OutputArea', handleAddOutput);
+
+    /**
+     * Register the mime type and append_mime function with output_area
+     */
+    OutputArea.prototype.register_mime_type(EXEC_MIME_TYPE, append_mime, {
+      /* Is output safe? */
+      safe: true,
+      /* Index of renderer in `output_area.display_order` */
+      index: 0
+    });
+  }
+
+  // register the mime type if in Jupyter Notebook environment and previously unregistered
+  if (root.Jupyter !== undefined) {
+    var events = require('base/js/events');
+    var OutputArea = require('notebook/js/outputarea').OutputArea;
+
+    if (OutputArea.prototype.mime_types().indexOf(EXEC_MIME_TYPE) == -1) {
+      register_renderer(events, OutputArea);
+    }
+  }
+
+  
+  if (typeof (root._bokeh_timeout) === "undefined" || force === true) {
+    root._bokeh_timeout = Date.now() + 5000;
+    root._bokeh_failed_load = false;
+  }
+
+  var NB_LOAD_WARNING = {'data': {'text/html':
+     "<div style='background-color: #fdd'>\n"+
+     "<p>\n"+
+     "BokehJS does not appear to have successfully loaded. If loading BokehJS from CDN, this \n"+
+     "may be due to a slow or bad network connection. Possible fixes:\n"+
+     "</p>\n"+
+     "<ul>\n"+
+     "<li>re-rerun `output_notebook()` to attempt to load from CDN again, or</li>\n"+
+     "<li>use INLINE resources instead, as so:</li>\n"+
+     "</ul>\n"+
+     "<code>\n"+
+     "from bokeh.resources import INLINE\n"+
+     "output_notebook(resources=INLINE)\n"+
+     "</code>\n"+
+     "</div>"}};
+
+  function display_loaded() {
+    var el = document.getElementById("b824ec48-ddec-46db-b7c0-d386cc012b09");
+    if (el != null) {
+      el.textContent = "BokehJS is loading...";
+    }
+    if (root.Bokeh !== undefined) {
+      if (el != null) {
+        el.textContent = "BokehJS " + root.Bokeh.version + " successfully loaded.";
+      }
+    } else if (Date.now() < root._bokeh_timeout) {
+      setTimeout(display_loaded, 100)
+    }
+  }
+
+
+  function run_callbacks() {
+    try {
+      root._bokeh_onload_callbacks.forEach(function(callback) { callback() });
+    }
+    finally {
+      delete root._bokeh_onload_callbacks
+    }
+    console.info("Bokeh: all callbacks have finished");
+  }
+
+  function load_libs(js_urls, callback) {
+    root._bokeh_onload_callbacks.push(callback);
+    if (root._bokeh_is_loading > 0) {
+      console.log("Bokeh: BokehJS is being loaded, scheduling callback at", now());
+      return null;
+    }
+    if (js_urls == null || js_urls.length === 0) {
+      run_callbacks();
+      return null;
+    }
+    console.log("Bokeh: BokehJS not loaded, scheduling load and callback at", now());
+    root._bokeh_is_loading = js_urls.length;
+    for (var i = 0; i < js_urls.length; i++) {
+      var url = js_urls[i];
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = false;
+      s.onreadystatechange = s.onload = function() {
+        root._bokeh_is_loading--;
+        if (root._bokeh_is_loading === 0) {
+          console.log("Bokeh: all BokehJS libraries loaded");
+          run_callbacks()
+        }
+      };
+      s.onerror = function() {
+        console.warn("failed to load library " + url);
+      };
+      console.log("Bokeh: injecting script tag for BokehJS library: ", url);
+      document.getElementsByTagName("head")[0].appendChild(s);
+    }
+  };var element = document.getElementById("b824ec48-ddec-46db-b7c0-d386cc012b09");
+  if (element == null) {
+    console.log("Bokeh: ERROR: autoload.js configured with elementid 'b824ec48-ddec-46db-b7c0-d386cc012b09' but no matching script tag was found. ")
+    return false;
+  }
+
+  var js_urls = ["https://cdn.pydata.org/bokeh/release/bokeh-0.12.13.min.js", "https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.13.min.js", "https://cdn.pydata.org/bokeh/release/bokeh-tables-0.12.13.min.js", "https://cdn.pydata.org/bokeh/release/bokeh-gl-0.12.13.min.js"];
+
+  var inline_js = [
+    function(Bokeh) {
+      Bokeh.set_log_level("info");
+    },
+    
+    function(Bokeh) {
+      
+    },
+    function(Bokeh) {
+      console.log("Bokeh: injecting CSS: https://cdn.pydata.org/bokeh/release/bokeh-0.12.13.min.css");
+      Bokeh.embed.inject_css("https://cdn.pydata.org/bokeh/release/bokeh-0.12.13.min.css");
+      console.log("Bokeh: injecting CSS: https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.13.min.css");
+      Bokeh.embed.inject_css("https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.13.min.css");
+      console.log("Bokeh: injecting CSS: https://cdn.pydata.org/bokeh/release/bokeh-tables-0.12.13.min.css");
+      Bokeh.embed.inject_css("https://cdn.pydata.org/bokeh/release/bokeh-tables-0.12.13.min.css");
+    }
+  ];
+
+  function run_inline_js() {
+    
+    if ((root.Bokeh !== undefined) || (force === true)) {
+      for (var i = 0; i < inline_js.length; i++) {
+        inline_js[i].call(root, root.Bokeh);
+      }if (force === true) {
+        display_loaded();
+      }} else if (Date.now() < root._bokeh_timeout) {
+      setTimeout(run_inline_js, 100);
+    } else if (!root._bokeh_failed_load) {
+      console.log("Bokeh: BokehJS failed to load within specified timeout.");
+      root._bokeh_failed_load = true;
+    } else if (force !== true) {
+      var cell = $(document.getElementById("b824ec48-ddec-46db-b7c0-d386cc012b09")).parents('.cell').data().cell;
+      cell.output_area.append_execute_result(NB_LOAD_WARNING)
+    }
+
+  }
+
+  if (root._bokeh_is_loading === 0) {
+    console.log("Bokeh: BokehJS loaded, going straight to plotting");
+    run_inline_js();
+  } else {
+    load_libs(js_urls, function() {
+      console.log("Bokeh: BokehJS plotting callback run at", now());
+      run_inline_js();
+    });
+  }
+}(window));
+</script>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [2]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">"points.txt"</span><span class="p">)</span>
+<span class="n">Data</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">'point_source_ID'</span><span class="p">,</span> <span class="s1">'edge_of_flight_line_flag'</span><span class="p">,</span> <span class="s1">'user_data'</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">Data</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt output_prompt">Out[2]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead><tr style="text-align: right;">
+<th></th>
+      <th>x</th>
+      <th>y</th>
+      <th>z</th>
+      <th>classification</th>
+      <th>gpstime</th>
+      <th>scan_angle</th>
+      <th>intensity</th>
+      <th>number_of_returns</th>
+      <th>return_number</th>
+      <th>direction_of_scan_flag</th>
+      <th>red_channel</th>
+      <th>green_channel</th>
+      <th>blue_channel</th>
+    </tr></thead>
+<tbody>
+<tr>
+<th>0</th>
+      <td>6357435.38</td>
+      <td>1920674.90</td>
+      <td>160.50</td>
+      <td>1</td>
+      <td>6.547720e+07</td>
+      <td>10</td>
+      <td>151</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>7680</td>
+      <td>8704</td>
+      <td>7424</td>
+    </tr>
+<tr>
+<th>1</th>
+      <td>6357435.38</td>
+      <td>1920675.95</td>
+      <td>160.01</td>
+      <td>2</td>
+      <td>6.547720e+07</td>
+      <td>10</td>
+      <td>78</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>7424</td>
+      <td>8960</td>
+      <td>7680</td>
+    </tr>
+<tr>
+<th>2</th>
+      <td>6357432.62</td>
+      <td>1920675.03</td>
+      <td>159.91</td>
+      <td>7</td>
+      <td>6.547720e+07</td>
+      <td>10</td>
+      <td>71</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>7424</td>
+      <td>8704</td>
+      <td>7936</td>
+    </tr>
+</tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Data</span><span class="p">[</span><span class="s1">'classification'</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt output_prompt">Out[3]:</div>
+
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>array([1, 2, 7, 5, 6])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Counts</span> <span class="o">=</span> <span class="n">Data</span><span class="p">[</span><span class="s1">'classification'</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+<span class="nb">print</span> <span class="p">(</span><span class="n">Counts</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>5    40252
+2    28543
+1    22793
+6    12812
+7     4255
+Name: classification, dtype: int64
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [5]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Data</span><span class="p">[</span><span class="s1">'r'</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s1">'x'</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">Data</span><span class="p">[</span><span class="s1">'y'</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">Data</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">'x'</span><span class="p">,</span> <span class="s1">'y'</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [6]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">DataCorrelations</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">corr</span><span class="p">()</span>
+<span class="nb">print</span> <span class="p">(</span><span class="n">DataCorrelations</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>                               z  classification   gpstime  scan_angle  \
+z                       1.000000        0.521013 -0.017554    0.024894   
+classification          0.521013        1.000000 -0.050794    0.046242   
+gpstime                -0.017554       -0.050794  1.000000   -0.887780   
+scan_angle              0.024894        0.046242 -0.887780    1.000000   
+intensity              -0.191177       -0.332200 -0.010847    0.038204   
+number_of_returns       0.328410        0.250299  0.020555   -0.030634   
+return_number          -0.041576        0.053497  0.013867   -0.021743   
+direction_of_scan_flag  0.001273        0.004487 -0.039010    0.042865   
+red_channel            -0.054378        0.039821  0.020954   -0.044339   
+green_channel          -0.027891        0.058669  0.015206   -0.037843   
+blue_channel           -0.126787        0.008045  0.009596   -0.026775   
+r                      -0.132905       -0.094354  0.219605   -0.278599   
+
+                        intensity  number_of_returns  return_number  \
+z                       -0.191177           0.328410      -0.041576   
+classification          -0.332200           0.250299       0.053497   
+gpstime                 -0.010847           0.020555       0.013867   
+scan_angle               0.038204          -0.030634      -0.021743   
+intensity                1.000000          -0.473522      -0.413507   
+number_of_returns       -0.473522           1.000000       0.690145   
+return_number           -0.413507           0.690145       1.000000   
+direction_of_scan_flag  -0.001349          -0.012350      -0.008577   
+red_channel             -0.042367          -0.032165      -0.019577   
+green_channel           -0.070250          -0.012859      -0.006326   
+blue_channel            -0.060186          -0.119975      -0.079786   
+r                       -0.048047           0.040567       0.025771   
+
+                        direction_of_scan_flag  red_channel  green_channel  \
+z                                     0.001273    -0.054378      -0.027891   
+classification                        0.004487     0.039821       0.058669   
+gpstime                              -0.039010     0.020954       0.015206   
+scan_angle                            0.042865    -0.044339      -0.037843   
+intensity                            -0.001349    -0.042367      -0.070250   
+number_of_returns                    -0.012350    -0.032165      -0.012859   
+return_number                        -0.008577    -0.019577      -0.006326   
+direction_of_scan_flag                1.000000    -0.000094       0.000569   
+red_channel                          -0.000094     1.000000       0.980049   
+green_channel                         0.000569     0.980049       1.000000   
+blue_channel                          0.001688     0.937501       0.954587   
+r                                    -0.021613     0.113368       0.095102   
+
+                        blue_channel         r  
+z                          -0.126787 -0.132905  
+classification              0.008045 -0.094354  
+gpstime                     0.009596  0.219605  
+scan_angle                 -0.026775 -0.278599  
+intensity                  -0.060186 -0.048047  
+number_of_returns          -0.119975  0.040567  
+return_number              -0.079786  0.025771  
+direction_of_scan_flag      0.001688 -0.021613  
+red_channel                 0.937501  0.113368  
+green_channel               0.954587  0.095102  
+blue_channel                1.000000  0.062992  
+r                           0.062992  1.000000  
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Classification is correlated with r weakly and z, intensity, number_of_returns strongly</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">RefinedData</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">'gpstime'</span><span class="p">,</span> <span class="s1">'scan_angle'</span><span class="p">,</span> <span class="s1">'direction_of_scan_flag'</span><span class="p">,</span> <span class="s1">'red_channel'</span><span class="p">,</span> <span class="s1">'green_channel'</span><span class="p">,</span> <span class="s1">'blue_channel'</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">RefinedData</span><span class="p">[</span><span class="s1">'z'</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">RefinedData</span><span class="p">[</span><span class="s1">'z'</span><span class="p">]</span> <span class="o">-</span> <span class="n">RefinedData</span><span class="p">[</span><span class="s1">'z'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">RefinedData</span><span class="p">[</span><span class="s1">'z'</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">RefinedData</span><span class="p">[</span><span class="s1">'z'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+<span class="n">RefinedData</span><span class="p">[</span><span class="s1">'r'</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">RefinedData</span><span class="p">[</span><span class="s1">'r'</span><span class="p">]</span> <span class="o">-</span> <span class="n">RefinedData</span><span class="p">[</span><span class="s1">'r'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">RefinedData</span><span class="p">[</span><span class="s1">'r'</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">RefinedData</span><span class="p">[</span><span class="s1">'r'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+<span class="n">RefinedData</span><span class="p">[</span><span class="s1">'intensity'</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">RefinedData</span><span class="p">[</span><span class="s1">'intensity'</span><span class="p">]</span> <span class="o">-</span> <span class="n">RefinedData</span><span class="p">[</span><span class="s1">'intensity'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">RefinedData</span><span class="p">[</span><span class="s1">'intensity'</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">RefinedData</span><span class="p">[</span><span class="s1">'intensity'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+<span class="n">RefinedData</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">Data</span> <span class="o">=</span> <span class="n">RefinedData</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Class1</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">Data</span><span class="p">[</span><span class="s1">'classification'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+<span class="n">Class1Sample</span> <span class="o">=</span> <span class="n">Class1</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span> <span class="o">=</span><span class="mi">4255</span><span class="p">)</span>
+<span class="n">Class2</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">Data</span><span class="p">[</span><span class="s1">'classification'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span>
+<span class="n">Class2Sample</span> <span class="o">=</span> <span class="n">Class2</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span> <span class="o">=</span><span class="mi">4255</span><span class="p">)</span>
+<span class="n">Class5</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">Data</span><span class="p">[</span><span class="s1">'classification'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">5</span><span class="p">]</span>
+<span class="n">Class5Sample</span> <span class="o">=</span> <span class="n">Class5</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span> <span class="o">=</span><span class="mi">4255</span><span class="p">)</span>
+<span class="n">Class6</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">Data</span><span class="p">[</span><span class="s1">'classification'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">6</span><span class="p">]</span>
+<span class="n">Class6Sample</span> <span class="o">=</span> <span class="n">Class6</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span> <span class="o">=</span><span class="mi">4255</span><span class="p">)</span>
+<span class="n">Class7</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">Data</span><span class="p">[</span><span class="s1">'classification'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">7</span><span class="p">]</span>
+<span class="n">Class7Sample</span> <span class="o">=</span> <span class="n">Class7</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span> <span class="o">=</span><span class="mi">4255</span><span class="p">)</span>
+
+<span class="n">W</span> <span class="o">=</span> <span class="n">Class1Sample</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Class2Sample</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">W</span> <span class="o">=</span> <span class="n">W</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Class5Sample</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">W</span> <span class="o">=</span> <span class="n">W</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Class6Sample</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">WellMixedData</span> <span class="o">=</span> <span class="n">W</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Class7Sample</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">WellMixedData</span> <span class="o">=</span> <span class="n">WellMixedData</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">frac</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="nb">print</span> <span class="p">(</span><span class="n">WellMixedData</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>(21275, 6)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">WellMixedData</span><span class="p">[[</span><span class="s1">'r'</span><span class="p">,</span> <span class="s1">'z'</span><span class="p">,</span> <span class="s1">'intensity'</span><span class="p">,</span> <span class="s1">'number_of_returns'</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">get_dummies</span><span class="p">(</span><span class="n">WellMixedData</span><span class="p">[</span><span class="s1">'classification'</span><span class="p">])</span><span class="o">.</span><span class="n">values</span>
+
+<span class="n">x_train</span><span class="p">,</span> <span class="n">x_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span> <span class="p">(</span><span class="n">x_train</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="nb">print</span> <span class="p">(</span><span class="n">y_train</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="n">NumberOfFeatures</span> <span class="o">=</span> <span class="n">x_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">NumberOfClasses</span> <span class="o">=</span> <span class="n">y_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>(17020, 4)
+(17020, 5)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">logit</span><span class="p">(</span><span class="n">C</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="mf">1.</span><span class="o">+</span><span class="n">pm</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">C</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [12]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">CreateModel</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">Model</span><span class="p">:</span>
+        <span class="n">Slopes</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s2">"Slopes"</span><span class="p">,</span> <span class="n">sd</span> <span class="o">=</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">NumberOfFeatures</span><span class="p">,</span> <span class="n">NumberOfClasses</span><span class="p">))</span>
+        <span class="n">Intercept</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s2">"Intercepts"</span><span class="p">,</span> <span class="n">sd</span> <span class="o">=</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">NumberOfClasses</span><span class="p">)</span>
+        <span class="n">LogOdds</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s2">"p"</span><span class="p">,</span> <span class="n">logit</span><span class="p">(</span><span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Slopes</span><span class="p">)</span> <span class="o">+</span> <span class="n">Intercept</span><span class="p">))</span>
+        
+        <span class="n">Observed</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Multinomial</span><span class="p">(</span><span class="s2">"Multi"</span><span class="p">,</span> <span class="n">p</span> <span class="o">=</span> <span class="n">LogOdds</span><span class="p">,</span> <span class="n">observed</span> <span class="o">=</span> <span class="n">Y</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+        
+        
+    <span class="k">return</span> <span class="n">Model</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [13]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">X</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">x_train</span><span class="p">)</span>
+<span class="n">Y</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">y_train</span><span class="p">)</span>
+<span class="n">Model</span> <span class="o">=</span> <span class="n">CreateModel</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>/anaconda3/lib/python3.6/site-packages/theano/tensor/basic.py:2184: UserWarning: theano.tensor.round() changed its default from `half_away_from_zero` to `half_to_even` to have the same default as NumPy. Use the Theano flag `warn.round=False` to disable this warning.
+  "theano.tensor.round() changed its default from"
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [16]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="n">approx</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s2">"Trace.p"</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">))</span>
+<span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">IOError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    
+    <span class="k">with</span> <span class="n">Model</span><span class="p">:</span>
+        <span class="n">inference</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">ADVI</span><span class="p">()</span>
+        <span class="n">approx</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">inference</span><span class="p">)</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">approx</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"Trace.p"</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>Average Loss = 14,170: 100%|██████████| 100000/100000 [25:48&lt;00:00, 64.59it/s]
+Finished [100%]: Average Loss = 14,170
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [17]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">X</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">x_test</span><span class="p">)</span>
+<span class="n">Y</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [57]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Intercepts</span> <span class="o">=</span> <span class="n">sample_array</span><span class="p">[</span><span class="s1">'Intercepts'</span><span class="p">]</span>
+<span class="n">Slopes</span> <span class="o">=</span> <span class="n">sample_array</span><span class="p">[</span><span class="s1">'Slopes'</span><span class="p">]</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [58]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Predictions</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x_test</span><span class="p">,</span><span class="n">Slopes</span><span class="p">)</span><span class="o">+</span><span class="n">Intercepts</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [59]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Probabilities</span> <span class="o">=</span> <span class="n">logit</span><span class="p">(</span><span class="n">Predictions</span><span class="p">)</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [60]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ppc_preds</span> <span class="o">=</span> <span class="p">(</span><span class="n">Probabilities</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">Probabilities</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">classification_report</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">ppc_preds</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>             precision    recall  f1-score   support
+
+          0       0.87      0.11      0.20       863
+          1       0.42      0.84      0.56       837
+          2       0.96      0.89      0.92       857
+          3       0.84      0.94      0.89       855
+          4       0.66      0.55      0.60       843
+
+avg / total       0.75      0.67      0.64      4255
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [50]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">TrainingProbabilities</span> <span class="o">=</span> <span class="n">logit</span><span class="p">(</span><span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span><span class="n">Slopes</span><span class="p">)</span><span class="o">+</span><span class="n">Intercepts</span><span class="p">)</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [51]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Training_preds</span> <span class="o">=</span> <span class="p">(</span><span class="n">TrainingProbabilities</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">TrainingProbabilities</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">classification_report</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">Training_preds</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>             precision    recall  f1-score   support
+
+          0       0.85      0.13      0.23      3392
+          1       0.43      0.84      0.57      3418
+          2       0.95      0.89      0.92      3398
+          3       0.84      0.94      0.88      3400
+          4       0.66      0.54      0.59      3412
+
+avg / total       0.74      0.67      0.64     17020
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>No Overfitting</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [ ]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">X</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">x_train</span><span class="p">)</span>
+<span class="n">Y</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">y_train</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">Model</span><span class="p">:</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">cores</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="n">njobs</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>Auto-assigning NUTS sampler...
+Initializing NUTS using jitter+adapt_diag...
+Multiprocess sampling (2 chains in 2 jobs)
+NUTS: [Intercepts, Slopes]
+ 21%|██▏       | 319/1500 [35:31&lt;2:11:29,  6.68s/it]</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    </div>
+  </div>
+
+    </div>
+    <aside class="postpromonav"><nav><ul class="pager hidden-print">
+<li class="previous">
+                <a href="diabetes-in-the-pima-indian-population-with-logistic-regression-and-hypothesis-testing.html" rel="prev" title="Predicting diabetes in the Pima Indian Population with Logistic Regression and Hypothesis Testing">Previous post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+        
+        
+        <div id="disqus_thread"></div>
+        <script>
+        var disqus_shortname ="jdhooghe-github-io",
+            disqus_url="https://jdhooghe.github.io/blog/lidar-classification.html",
+        disqus_title="Lidar Classification",
+        disqus_identifier="cache/posts/lidar-classification.html",
+        disqus_config = function () {
+            this.language = "en";
+        };
+        (function() {
+            var dsq = document.createElement('script'); dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script><noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a>
+</noscript>
+    <a href="https://disqus.com" class="dsq-brlink" rel="nofollow">Comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+        </section><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha256-SDRP1VVYu+tgAGKhddBSl5+ezofHKZeI+OzxakbIe/Y=" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
+        </script></article><script>var disqus_shortname="jdhooghe-github-io";(function(){var a=document.createElement("script");a.async=true;a.src="https://"+disqus_shortname+".disqus.com/count.js";(document.getElementsByTagName("head")[0]||document.getElementsByTagName("body")[0]).appendChild(a)}());</script>
+</div>
+        <!--End of body content-->
+
+        <footer id="footer">
+            Contents © 2018         <a href="mailto:jdhooghe@gmail.com">Justin Dhooghe</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+
+            <script src="../assets/js/all-nocdn.js"></script><script>$('a.image-reference:not(.islink) img:not(.islink)').parent().colorbox({rel:"gal",maxWidth:"100%",maxHeight:"100%",scalePhotos:true});</script><!-- fancy dates --><script>
+    moment.locale("en");
+    fancydates(0, "YYYY-MM-DD HH:mm");
+    </script><!-- end fancy dates -->
+</body>
+</html>
